@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="main.css" media="screen" />
+    <title>Formulário Automático</title>
+    <style>
+        /* Adicione estilos CSS aqui conforme necessário */
+        .container {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>ANEXAR DOCUMENTOS</h1>
+       <form>
+    <div>
+        <label for="documento">Documento:</label>
+        <input type="file" id="documento" name="documento" accept=".png, .jpg, .jpeg" required>
+    </div>
+    <button id="enviarDocumentoBtn" type="button">Enviar Documento</button>
+</form>
+
+<div id="resultado"></div> <!-- Para exibir o resultado do processamento -->
+    </div>
+    
+    <div class="container">
+        <h1>Formulário de Empréstimo Consignado</h1>
+        <form id="consignadoForm">
+            <label for="nomeCompleto">Nome Completo:</label>
+            <input type="text" id="nomeCompleto" name="nomeCompleto" required>
+
+            <label for="nomeMae">Nome da Mãe:</label>
+            <input type="text" id="nomeMae" name="nomeMae" required>
+
+            <label for="cpf">CPF:</label>
+            <input type="text" id="cpf" name="cpf" required>
+
+            <label for="rg">RG:</label>
+            <input type="text" id="rg" name="rg" required>
+
+            <label for="dataNascimento">Data de Nascimento:</label>
+            <input type="date" id="dataNascimento" name="dataNascimento" required>
+
+            <label for="dataExpedicao">Data de Expedição do RG:</label>
+            <input type="date" id="dataExpedicao" name="dataExpedicao" required>
+
+            <label for="orgaoEmissor">Órgão Emissor:</label>
+            <input type="text" id="orgaoEmissor" name="orgaoEmissor" required>
+
+            <label for="ufEmissor">UF do Órgão Emissor:</label>
+            <input type="text" id="ufEmissor" name="ufEmissor" required>
+
+            <label for="telefone">Número de Telefone:</label>
+            <input type="tel" id="telefone" name="telefone" required>
+
+            <label for="senhaINSS">Senha do INSS:</label>
+            <input type="password" id="senhaINSS" name="senhaINSS">
+
+            <button type="submit">Enviar</button>
+        </form>
+    </div>
+    
+    <div class="container cep-container">
+        <h1>Consulta de CEP</h1>
+        <form id="cepForm">
+            <label for="cepInput">CEP:</label>
+            <input type="text" id="cepInput" name="cep" required>
+            <button type="submit">Buscar</button>
+        </form>
+        
+        <!-- Campos preenchidos automaticamente -->
+        <label for="logradouroInput">Logradouro:</label>
+        <input type="text" id="logradouroInput" name="logradouro" readonly><br>
+        <label for="numeroInput">Número:</label>
+        <input type="text" id="numeroInput" name="numero"><br>
+        <label for="bairroInput">Bairro:</label>
+        <input type="text" id="bairroInput" name="bairro" readonly><br>
+        <label for="cidadeInput">Cidade:</label>
+        <input type="text" id="cidadeInput" name="cidade" readonly><br>
+        <label for="estadoInput">Estado:</label>
+        <input type="text" id="estadoInput" name="estado" readonly><br>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tecnoguru/tesseract.js@2.0.0/dist/tesseract.js"></script>
+    <script>
+        // Função para buscar informações do CEP
+        function buscarCEP(cep) {
+            // Endpoint da API do ViaCEP
+            const url = `https://viacep.com.br/ws/${cep}/json/`;
+
+            // Requisição GET para a API do ViaCEP
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erro ao buscar informações do CEP');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Preenche os campos com as informações do CEP
+                    document.getElementById('logradouroInput').value = data.logradouro;
+                    document.getElementById('numeroInput').value = ''; // Limpa o campo número
+                    document.getElementById('bairroInput').value = data.bairro;
+                    document.getElementById('cidadeInput').value = data.localidade;
+                    document.getElementById('estadoInput').value = data.uf;
+                })
+                .catch(error => {
+                    console.error('Ocorreu um erro:', error);
+                    alert('Erro ao buscar informações do CEP');
+                });
+        }
+
+        // Manipulador de evento para o envio do formulário
+        document.getElementById('cepForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Evita o envio do formulário
+
+            const cep = document.getElementById('cepInput').value;
+            buscarCEP(cep);
+        });
+
+        async function processarDocumento(file) {
+    const worker = Tesseract.createWorker({
+        logger: progress => console.log(progress),
+    });
+
+    await worker.load();
+    await worker.loadLanguage('por');
+    await worker.initialize('por');
+    const { data: { text } } = await worker.recognize(file);
+    console.log(text);
+
+    // Exemplo de extração de informações: 
+    const dadosExtraidos = extrairDados(text);
+
+    // Preencher automaticamente os campos do formulário
+    document.getElementById('nomeCompleto').value = dadosExtraidos.nomeCompleto || '';
+    document.getElementById('nomeMae').value = dadosExtraidos.nomeMae || '';
+    document.getElementById('cpf').value = dadosExtraidos.cpf || '';
+    document.getElementById('rg').value = dadosExtraidos.rg || '';
+    document.getElementById('dataNascimento').value = dadosExtraidos.dataNascimento || '';
+    document.getElementById('dataExpedicao').value = dadosExtraidos.dataExpedicao || '';
+    document.getElementById('orgaoEmissor').value = dadosExtraidos.orgaoEmissor || '';
+    document.getElementById('ufEmissor').value = dadosExtraidos.ufEmissor || '';
+    document.getElementById('telefone').value = dadosExtraidos.telefone || '';
+    document.getElementById('senhaINSS').value = dadosExtraidos.senhaINSS || '';
+
+    await worker.terminate();
+}
+
+function extrairDados(texto) {
+    // Aqui você deve implementar a lógica para extrair os dados relevantes do texto do documento
+    // Por favor, substitua o código abaixo pela lógica adequada de acordo com o formato do documento.
+    return {
+        nomeCompleto: 'Fulano de Tal',
+        nomeMae: 'Mãe do Fulano',
+        cpf: '123.456.789-00',
+        rg: '123456789',
+        dataNascimento: '01/01/1990',
+        dataExpedicao: '01/01/2000',
+        orgaoEmissor: 'SSP',
+        ufEmissor: 'SP',
+        telefone: '(00) 1234-5678',
+        senhaINSS: 'senha123'
+    };
+}
+
+// Manipulador de evento para o botão de enviar documento
+document.getElementById('enviarDocumentoBtn').addEventListener('click', function() {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.png, .jpg, .jpeg';
+    fileInput.onchange = function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            processarDocumento(file);
+        } else {
+            console.error('Nenhum arquivo selecionado');
+        }
+    };
+    fileInput.click();
+});
+
+    </script>
+</body>
+</html>
